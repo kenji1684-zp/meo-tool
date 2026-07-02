@@ -1,0 +1,9 @@
+【Google cloud】
+
+https://console.cloud.google.com/welcome?project=zeroplus-gbp
+
+
+プロジェクト番号：433862010867
+プロジェクトID：zeroplus-gbp
+
+

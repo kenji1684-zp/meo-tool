@@ -1,0 +1,36 @@
+name: キーワード順位 自動チェック
+
+on:
+  schedule:
+    # 毎日 AM 9:00 JST = UTC 00:00
+    - cron: '0 0 * * *'
+  workflow_dispatch:  # 手動実行ボタン（テスト用）
+
+jobs:
+  check-rankings:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 結果をコミットするために必要
+
+    steps:
+      - name: リポジトリをチェックアウト
+        uses: actions/checkout@v4
+
+      - name: Node.js セットアップ
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: キーワード順位チェック実行
+        env:
+          GOOGLE_PLACES_API_KEY: ${{ secrets.GOOGLE_PLACES_API_KEY }}
+        run: node scripts/check-rankings.mjs
+
+      - name: 結果をコミット＆プッシュ
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/rankings/
+          # 変更がある場合のみコミット
+          git diff --cached --quiet || git commit -m "chore: キーワード順位自動チェック $(date +'%Y-%m-%d')"
+          git push
