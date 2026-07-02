@@ -1,14 +1,11 @@
 /**
- * キーワード順位自動チェック スタンドアロンスクリプト
+ * キーワード順位自動チェック スタンドアロンスクリプト（複数社対応）
  *
  * 使い方:
  *   node scripts/check-rankings.mjs
  *
  * 必要な環境変数:
  *   GOOGLE_PLACES_API_KEY  (GitHub Secrets または .env.local から)
- *
- * GitHub Actions から毎日 AM9:00 JST に自動実行される。
- * Next.js サーバーが起動していなくても動作する。
  */
 
 import fs   from 'fs'
@@ -38,49 +35,56 @@ function loadEnv() {
 }
 
 // ─────────────────────────────────────────────
-// キーワード設定の読み込み
+// キーワード設定の読み込み（複数社対応）
 // ─────────────────────────────────────────────
 function getSettings() {
   const file = path.join(DATA_DIR, 'keyword-settings.json')
-  if (!fs.existsSync(file)) return null
+  if (!fs.existsSync(file)) return []
   try {
-    return JSON.parse(fs.readFileSync(file, 'utf-8'))
+    const raw = JSON.parse(fs.readFileSync(file, 'utf-8'))
+    // 旧形式（単一オブジェクト）にも対応
+    if (Array.isArray(raw)) return raw
+    if (raw.companies) return raw.companies
+    // 旧形式: { locationName, businessTitle, keywords }
+    return [{
+      id:            raw.locationName?.replace(/\//g, '_') ?? 'default',
+      businessTitle: raw.businessTitle ?? raw.locationName ?? '',
+      locationName:  raw.locationName ?? '',
+      keywords:      raw.keywords ?? [],
+    }]
   } catch {
-    return null
+    return []
   }
 }
 
 // ─────────────────────────────────────────────
 // 今日のデータが既にあるか確認
 // ─────────────────────────────────────────────
-function alreadyCheckedToday(locationName, dateStr) {
-  const id   = locationName.replace(/\//g, '_')
-  const file = path.join(DATA_DIR, 'rankings', id, `${dateStr}.json`)
+function alreadyCheckedToday(companyId, dateStr) {
+  const file = path.join(DATA_DIR, 'rankings', companyId, `${dateStr}.json`)
   return fs.existsSync(file)
 }
 
 // ─────────────────────────────────────────────
 // 順位データの保存
 // ─────────────────────────────────────────────
-function saveRankings(locationName, dateStr, rankings) {
-  const id  = locationName.replace(/\//g, '_')
-  const dir = path.join(DATA_DIR, 'rankings', id)
+function saveRankings(companyId, dateStr, rankings) {
+  const dir = path.join(DATA_DIR, 'rankings', companyId)
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
   const file = path.join(dir, `${dateStr}.json`)
   fs.writeFileSync(file, JSON.stringify(rankings, null, 2))
-  console.log(`💾 保存: ${file}`)
+  console.log(`  💾 保存: data/rankings/${companyId}/${dateStr}.json`)
 }
 
 // ─────────────────────────────────────────────
 // Google Places API でキーワード順位を取得
 // ─────────────────────────────────────────────
-async function getKeywordRank(keyword, businessName, apiKey) {
-  // Places API v1 Text Search
+async function getKeywordRank(keyword, businessTitle, apiKey) {
   const url = 'https://places.googleapis.com/v1/places:searchText'
   const body = JSON.stringify({
-    textQuery:   keyword,
+    textQuery:    keyword,
     languageCode: 'ja',
-    regionCode:  'JP',
+    regionCode:   'JP',
     maxResultCount: 20,
   })
 
@@ -99,25 +103,53 @@ async function getKeywordRank(keyword, businessName, apiKey) {
     throw new Error(`Places API error ${res.status}: ${text}`)
   }
 
-  const data = await res.json()
+  const data   = await res.json()
   const places = data.places ?? []
 
   // ビジネス名で部分一致検索
-  const normalizedBiz = businessName.replace(/[（）()　\s]/g, '').toLowerCase()
+  const normalizedBiz = businessTitle.replace(/[（）()　\s株式会社有限会社]/g, '').toLowerCase()
   const idx = places.findIndex(p => {
-    const name = (p.displayName?.text ?? '').replace(/[（）()　\s]/g, '').toLowerCase()
+    const name = (p.displayName?.text ?? '').replace(/[（）()　\s株式会社有限会社]/g, '').toLowerCase()
     return name.includes(normalizedBiz) || normalizedBiz.includes(name)
   })
 
-  return idx === -1 ? null : idx + 1  // 1始まり、見つからなければ null（圏外）
+  return idx === -1 ? null : idx + 1
 }
 
 // ─────────────────────────────────────────────
-// ビジネス名をロケーション名から取得
-// （例: "accounts/123/locations/456" → settings に title がなければ locationName そのまま）
+// 1社分の順位チェック
 // ─────────────────────────────────────────────
-function getBusinessTitle(settings) {
-  return settings.businessTitle ?? settings.locationName
+async function checkCompany(company, dateStr, apiKey) {
+  const { id, businessTitle, keywords } = company
+
+  if (!id || !businessTitle || !keywords?.length) {
+    console.log(`  ⚠️  設定不足のためスキップ: ${JSON.stringify(company)}`)
+    return
+  }
+
+  if (alreadyCheckedToday(id, dateStr)) {
+    console.log(`  ✅ 本日(${dateStr})のデータは取得済みのためスキップ`)
+    return
+  }
+
+  console.log(`  🏪 ビジネス名: ${businessTitle}`)
+  console.log(`  🔑 キーワード数: ${keywords.length}`)
+
+  const rankings = []
+  for (const keyword of keywords) {
+    try {
+      const rank = await getKeywordRank(keyword, businessTitle, apiKey)
+      rankings.push({ keyword, rank })
+      console.log(`    "${keyword}" → ${rank === null ? '圏外' : `${rank}位`}`)
+      await new Promise(r => setTimeout(r, 500))
+    } catch (err) {
+      console.error(`    "${keyword}" エラー: ${err.message}`)
+      rankings.push({ keyword, rank: null })
+    }
+  }
+
+  saveRankings(id, dateStr, rankings)
+  console.log(`  ✅ 完了: ${rankings.length}件保存`)
 }
 
 // ─────────────────────────────────────────────
@@ -132,47 +164,27 @@ async function main() {
     process.exit(1)
   }
 
-  const settings = getSettings()
-  if (!settings || !settings.locationName || !settings.keywords?.length) {
-    console.error('❌ data/keyword-settings.json が見つからないか設定が空です')
+  const companies = getSettings()
+  if (companies.length === 0) {
+    console.error('❌ data/keyword-settings.json に会社設定がありません')
     process.exit(1)
   }
 
-  // 日本時間で今日の日付を取得
+  // 日本時間で今日の日付
   const jstNow  = new Date(Date.now() + 9 * 60 * 60 * 1000)
-  const dateStr = jstNow.toISOString().slice(0, 10) // "YYYY-MM-DD"
+  const dateStr = jstNow.toISOString().slice(0, 10)
 
   console.log(`📅 チェック日: ${dateStr}`)
-  console.log(`📍 ロケーション: ${settings.locationName}`)
-  console.log(`🔑 キーワード数: ${settings.keywords.length}`)
+  console.log(`🏢 対象会社数: ${companies.length}社`)
+  console.log('═══════════════════════════')
 
-  // 今日のデータが既にある場合はスキップ
-  if (alreadyCheckedToday(settings.locationName, dateStr)) {
-    console.log(`✅ 本日(${dateStr})のデータは取得済みのためスキップ`)
-    process.exit(0)
+  for (const company of companies) {
+    console.log(`\n▶ ${company.businessTitle ?? company.id}`)
+    await checkCompany(company, dateStr, apiKey)
   }
 
-  const businessTitle = getBusinessTitle(settings)
-  console.log(`🏪 ビジネス名: ${businessTitle}`)
-  console.log('---')
-
-  const rankings = []
-  for (const keyword of settings.keywords) {
-    try {
-      const rank = await getKeywordRank(keyword, businessTitle, apiKey)
-      rankings.push({ keyword, rank })
-      console.log(`  "${keyword}" → ${rank === null ? '圏外' : `${rank}位`}`)
-      // API レート制限を避けるため少し待機
-      await new Promise(r => setTimeout(r, 500))
-    } catch (err) {
-      console.error(`  "${keyword}" エラー: ${err.message}`)
-      rankings.push({ keyword, rank: null })
-    }
-  }
-
-  saveRankings(settings.locationName, dateStr, rankings)
-  console.log('---')
-  console.log(`✅ 完了: ${rankings.length}件のキーワード順位を保存しました`)
+  console.log('\n═══════════════════════════')
+  console.log('✅ 全社チェック完了')
 }
 
 main().catch(err => {
