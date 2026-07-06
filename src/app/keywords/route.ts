@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { DEMO_KEYWORDS } from '@/lib/demo-data'
@@ -13,14 +13,14 @@ export async function GET(req: NextRequest) {
 
   if (DEMO_MODE) {
     return NextResponse.json({
-      locationName: '株式会社ZEROPLUS�E�徳島本店！E,
+      locationName: '譬ｪ蠑丈ｼ夂､ｾZEROPLUS・亥ｾｳ蟲ｶ譛ｬ蠎暦ｼ・,
       rankings: DEMO_KEYWORDS,
       checkedAt: new Date().toISOString(),
       demo: true,
     })
   }
 
-  return NextResponse.json({ error: 'API申請審査中でぁE }, { status: 503 })
+  return NextResponse.json({ error: 'API逕ｳ隲句ｯｩ譟ｻ荳ｭ縺ｧ縺・ }, { status: 503 })
 }
 
 export async function POST(req: NextRequest) {
