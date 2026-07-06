@@ -22,7 +22,7 @@ export async function GET(_req: NextRequest) {
 
     const allLocations = await Promise.all(
       accounts.map((account) =>
-        listLocations(session.accessToken, account.name)
+        listLocations(session.accessToken!, account.name)
       )
     )
 
