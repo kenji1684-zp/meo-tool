@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+﻿import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { listAccounts, listLocations } from '@/lib/gbp-client'
@@ -21,7 +21,7 @@ export async function GET(_req: NextRequest) {
   }
 
   try {
-    const { accounts } = await listAccounts(session.accessToken)
+    const accounts = await listAccounts(session.accessToken!)
     if (!accounts?.length) {
       return NextResponse.json({ locations: [] })
     }
