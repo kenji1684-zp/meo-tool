@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import {
@@ -24,20 +24,20 @@ const DEFAULT_METRICS: MetricType[] = [
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
 // =============================================
-// 繝・Δ繝・・繧ｿ逕滓・
+// デモデータ生成
 // =============================================
 
 function generateDemoPerformance(yearmonth: string | null) {
   return {
     yearmonth: yearmonth ?? '2026/06',
     metrics: [
-      { metric: 'BUSINESS_IMPRESSIONS_DESKTOP_SEARCH', label: '讀懃ｴ｢陦ｨ遉ｺ・・C・・,     color: '#10b981', total: 820,  data: [] },
-      { metric: 'BUSINESS_IMPRESSIONS_MOBILE_SEARCH',  label: '讀懃ｴ｢陦ｨ遉ｺ・医Δ繝舌う繝ｫ・・, color: '#06b6d4', total: 420,  data: [] },
-      { metric: 'BUSINESS_IMPRESSIONS_DESKTOP_MAPS',   label: '繝槭ャ繝苓｡ｨ遉ｺ・・C・・,    color: '#f59e0b', total: 310,  data: [] },
-      { metric: 'BUSINESS_IMPRESSIONS_MOBILE_MAPS',    label: '繝槭ャ繝苓｡ｨ遉ｺ・医Δ繝舌う繝ｫ・・,color: '#f97316', total: 510,  data: [] },
-      { metric: 'WEBSITE_CLICKS',                      label: 'Web繧ｵ繧､繝医け繝ｪ繝・け',   color: '#3b82f6', total: 86,   data: [] },
-      { metric: 'CALL_CLICKS',                         label: '髮ｻ隧ｱ繧ｯ繝ｪ繝・け',        color: '#ef4444', total: 42,   data: [] },
-      { metric: 'BUSINESS_DIRECTION_REQUESTS',         label: '驕馴・Μ繧ｯ繧ｨ繧ｹ繝・,      color: '#8b5cf6', total: 31,   data: [] },
+      { metric: 'BUSINESS_IMPRESSIONS_DESKTOP_SEARCH', label: '検索表示（PC）',     color: '#10b981', total: 820,  data: [] },
+      { metric: 'BUSINESS_IMPRESSIONS_MOBILE_SEARCH',  label: '検索表示（モバイル）', color: '#06b6d4', total: 420,  data: [] },
+      { metric: 'BUSINESS_IMPRESSIONS_DESKTOP_MAPS',   label: 'マップ表示（PC）',    color: '#f59e0b', total: 310,  data: [] },
+      { metric: 'BUSINESS_IMPRESSIONS_MOBILE_MAPS',    label: 'マップ表示（モバイル）',color: '#f97316', total: 510,  data: [] },
+      { metric: 'WEBSITE_CLICKS',                      label: 'Webサイトクリック',   color: '#3b82f6', total: 86,   data: [] },
+      { metric: 'CALL_CLICKS',                         label: '電話クリック',        color: '#ef4444', total: 42,   data: [] },
+      { metric: 'BUSINESS_DIRECTION_REQUESTS',         label: '道順リクエスト',      color: '#8b5cf6', total: 31,   data: [] },
     ],
     summary: {
       totalSearchViews:        1240,
@@ -52,18 +52,18 @@ function generateDemoPerformance(yearmonth: string | null) {
 }
 
 const DEMO_KEYWORDS = [
-  { searchKeyword: '繧｢繝医Λ繧ｯ繧ｷ繝ｧ繝ｳ',    count: 474 },
-  { searchKeyword: '縺医↓縺・,           count: 351 },
-  { searchKeyword: '譬ｪ蠑丈ｼ夂､ｾenishi',   count: 145 },
-  { searchKeyword: '蠕ｳ蟲ｶ 螟匁ｧ・,        count: 117 },
-  { searchKeyword: '蠕ｳ蟲ｶ逵・螟匁ｧ・,      count: 64  },
-  { searchKeyword: '繧ｨ繝九す',           count: 55  },
-  { searchKeyword: '縺医↓縺・蠕ｳ蟲ｶ',      count: 38  },
-  { searchKeyword: '譬ｪ蠑丈ｼ夂､ｾ enishi',  count: 18  },
+  { searchKeyword: 'アトラクション',    count: 474 },
+  { searchKeyword: 'えにし',           count: 351 },
+  { searchKeyword: '株式会社enishi',   count: 145 },
+  { searchKeyword: '徳島 外構',        count: 117 },
+  { searchKeyword: '徳島県 外構',      count: 64  },
+  { searchKeyword: 'エニシ',           count: 55  },
+  { searchKeyword: 'えにし 徳島',      count: 38  },
+  { searchKeyword: '株式会社 enishi',  count: 18  },
 ]
 
 // =============================================
-// 繝倥Ν繝代・髢｢謨ｰ
+// ヘルパー関数
 // =============================================
 
 function buildPerformanceData(rawMetrics: ReturnType<typeof Array.prototype.flatMap>): PerformanceData[] {
@@ -99,7 +99,7 @@ function buildSummary(performanceData: PerformanceData[]) {
 }
 
 // =============================================
-// API 繝上Φ繝峨Λ
+// API ハンドラ
 // =============================================
 
 export async function GET(req: NextRequest) {
@@ -112,14 +112,14 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const locationName = searchParams.get('location')
   const yearmonth    = searchParams.get('yearmonth')
-  // mode: 'daily' (繝・ヵ繧ｩ繝ｫ繝・ | 'keywords'
+  // mode: 'daily' (デフォルト) | 'keywords'
   const mode         = searchParams.get('mode') ?? 'daily'
 
   if (!locationName) {
     return NextResponse.json({ error: 'location parameter is required' }, { status: 400 })
   }
 
-  // ---- 繝・Δ繝｢繝ｼ繝・----
+  // ---- デモモード ----
   if (DEMO_MODE || locationName.includes('demo')) {
     if (mode === 'keywords') {
       return NextResponse.json({ keywords: DEMO_KEYWORDS })
@@ -127,22 +127,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(generateDemoPerformance(yearmonth))
   }
 
-  // ---- 讀懃ｴ｢繧ｭ繝ｼ繝ｯ繝ｼ繝峨Δ繝ｼ繝・----
+  // ---- 検索キーワードモード ----
   if (mode === 'keywords') {
     try {
       const keywords = await fetchSearchKeywords(session.accessToken, locationName)
       return NextResponse.json({ keywords })
     } catch (err) {
       console.error('searchKeywords error:', err)
-      // 繧ｨ繝ｩ繝ｼ譎ゅ・繝・Δ繝・・繧ｿ繧定ｿ斐☆・郁｡ｨ遉ｺ繧帝泌・繧後＆縺帙↑縺・ｼ・
+      // エラー時はデモデータを返す（表示を途切れさせない）
       return NextResponse.json({
         keywords: DEMO_KEYWORDS,
-        warning: `讀懃ｴ｢繧ｭ繝ｼ繝ｯ繝ｼ繝陰PI繧ｨ繝ｩ繝ｼ: ${err instanceof Error ? err.message : String(err)}`,
+        warning: `検索キーワードAPIエラー: ${err instanceof Error ? err.message : String(err)}`,
       })
     }
   }
 
-  // ---- 譌･蛻･繝・・繧ｿ繝｢繝ｼ繝会ｼ医ョ繝輔か繝ｫ繝茨ｼ・----
+  // ---- 日別データモード（デフォルト） ----
   let year: number
   let month: number
 
@@ -178,19 +178,19 @@ export async function GET(req: NextRequest) {
 
     const message = err instanceof Error ? err.message : 'Unknown error'
 
-    // 繧ｯ繧ｩ繝ｼ繧ｿ雜・℃譎ゅ・繝・Δ繝・・繧ｿ
+    // クォータ超過時はデモデータ
     if (message.includes('429')) {
       return NextResponse.json({
         ...generateDemoPerformance(yearmonth),
-        warning: 'Google Business Profile API縺ｮQuota縺・縺ｮ縺溘ａ縲√ョ繝｢繝・・繧ｿ繧定｡ｨ遉ｺ縺励※縺・∪縺吶・,
+        warning: 'Google Business Profile APIのQuotaが0のため、デモデータを表示しています。',
       })
     }
 
-    // API譛ｪ譛牙柑蛹厄ｼ・04・峨・繝・Δ繝・・繧ｿ
+    // API未有効化（404）はデモデータ
     if (message.includes('404')) {
       return NextResponse.json({
         ...generateDemoPerformance(yearmonth),
-        warning: 'Business Profile Performance API縺梧怏蜉ｹ蛹悶＆繧後※縺・∪縺帙ｓ縲・oogle Cloud Console縺ｧ縲沓usiness Profile Performance API縲阪ｒ譛牙柑縺ｫ縺励※縺上□縺輔＞縲・,
+        warning: 'Business Profile Performance APIが有効化されていません。Google Cloud Consoleで「Business Profile Performance API」を有効にしてください。',
       })
     }
 
