@@ -26,7 +26,7 @@ export async function GET(_req: NextRequest) {
       return NextResponse.json({ locations: [] })
     }
     const allLocations = await Promise.all(
-      accounts.map(account => listLocations(session.accessToken, account.name))
+      accounts.map(account => listLocations(session.accessToken!, account.name))
     )
     return NextResponse.json({ accounts, locations: allLocations.flat() })
   } catch (err) {
