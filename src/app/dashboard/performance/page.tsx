@@ -475,7 +475,7 @@ export default function PerformancePage() {
     const headers = ['日付', ...DAILY_METRICS.map(m => m.label)]
     const rows = dailyChartData.map(d => [
       d.date as string,
-      ...DAILY_METRICS.map(m => String(d[m.key] ?? 0)),
+      ...DAILY_METRICS.map(m => String((d as Record<string, string | number>)[m.key] ?? 0)),
     ])
     downloadCSV(`performance-daily-${yearmonth.replace('/', '-')}.csv`, [headers, ...rows])
   }
@@ -485,7 +485,7 @@ export default function PerformancePage() {
     const headers = ['曜日', ...DAILY_METRICS.map(m => m.label)]
     const rows = weekdayData.map(d => [
       d.weekday as string,
-      ...DAILY_METRICS.map(m => String(d[m.key] ?? 0)),
+      ...DAILY_METRICS.map(m => String((d as Record<string, string | number>)[m.key] ?? 0)),
     ])
     downloadCSV(`performance-weekday-${yearmonth.replace('/', '-')}.csv`, [headers, ...rows])
   }
