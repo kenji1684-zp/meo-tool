@@ -66,8 +66,9 @@ const DEMO_KEYWORDS = [
 // ヘルパー関数
 // =============================================
 
-function buildPerformanceData(rawMetrics: ReturnType<typeof Array.prototype.flatMap>): PerformanceData[] {
-  return rawMetrics.map((m: { dailyMetric: string; timeSeries: { datedValues: { date: { year: number; month: number; day: number }; value?: string }[] } }) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildPerformanceData(rawMetrics: any[]): PerformanceData[] {
+  return rawMetrics.map((m) => {
     const metricType = m.dailyMetric as MetricType
     const dataPoints = m.timeSeries.datedValues.map((dv: { date: { year: number; month: number; day: number }; value?: string }) => ({
       date: `${dv.date.year}/${String(dv.date.month).padStart(2, '0')}/${String(dv.date.day).padStart(2, '0')}`,
