@@ -1,6 +1,6 @@
-ï»¿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth'
 import { listReviews } from '@/lib/gbp-client'
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
@@ -28,17 +28,17 @@ export async function GET(req: NextRequest) {
       reviews: [
         {
           reviewId: 'demo-review-1',
-          reviewer: { displayName: 'å±±ç”°å¤ªéƒ' },
+          reviewer: { displayName: 'R“c‘¾˜Y' },
           starRating: 'FIVE',
-          comment: 'å¯¾å¿œãŒéå¸¸ã«æ—©ãã€ä¸å¯§ã§ã—ãŸã€‚ã¾ãŸåˆ©ç”¨ã—ãŸã„ã¨æ€ã„ã¾ã™ã€‚',
+          comment: '‘Î‰‚ª”ñí‚É‘‚­A’š”J‚Å‚µ‚½B‚Ü‚½—˜—p‚µ‚½‚¢‚Æv‚¢‚Ü‚·B',
           createTime: '2026-06-01T10:00:00Z',
           updateTime: '2026-06-01T10:00:00Z',
         },
         {
           reviewId: 'demo-review-2',
-          reviewer: { displayName: 'ä½è—¤èŠ±å­' },
+          reviewer: { displayName: '²“¡‰Ôq' },
           starRating: 'FOUR',
-          comment: 'é›»è©±å¯¾å¿œãŒã‚¹ãƒ ãƒ¼ã‚ºã§å®‰å¿ƒã—ã¦ä¾é ¼ã§ãã¾ã—ãŸã€‚',
+          comment: '“d˜b‘Î‰‚ªƒXƒ€[ƒY‚ÅˆÀS‚µ‚ÄˆË—Š‚Å‚«‚Ü‚µ‚½B',
           createTime: '2026-06-03T14:30:00Z',
           updateTime: '2026-06-03T14:30:00Z',
         },

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth'
 import { fetchDailyMetrics, getMonthRange, METRIC_LABELS, METRIC_COLORS } from '@/lib/gbp-client'
 import { MetricType, PerformanceData } from '@/types'
 import { DEMO_PERFORMANCE, DEMO_SUMMARY } from '@/lib/demo-data'

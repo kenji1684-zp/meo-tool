@@ -1,6 +1,6 @@
-ï»¿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth'
 import { listAccounts, listLocations } from '@/lib/gbp-client'
 
 export async function GET(_req: NextRequest) {
@@ -41,21 +41,21 @@ export async function GET(_req: NextRequest) {
         accounts: [
           {
             name: 'accounts/demo',
-            accountName: 'ãƒ‡ãƒ¢ã‚¢ã‚«ã‚¦ãƒ³ãƒˆ',
+            accountName: 'ƒfƒ‚ƒAƒJƒEƒ“ƒg',
             type: 'PERSONAL',
           },
         ],
         locations: [
           {
             name: 'locations/demo-001',
-            title: 'æ ªå¼ä¼šç¤¾ZEROPLUS ãƒ‡ãƒ¢åº—èˆ—',
+            title: 'Š”®‰ïĞZEROPLUS ƒfƒ‚“X•Ü',
             websiteUri: 'https://zeroplustokushima.com',
             storefrontAddress: {
               regionCode: 'JP',
               postalCode: '770-0000',
-              administrativeArea: 'å¾³å³¶çœŒ',
-              locality: 'å¾³å³¶å¸‚',
-              addressLines: ['ãƒ‡ãƒ¢ä½æ‰€1-2-3'],
+              administrativeArea: '“¿“‡Œ§',
+              locality: '“¿“‡s',
+              addressLines: ['ƒfƒ‚ZŠ1-2-3'],
             },
             metadata: {
               mapsUri: 'https://maps.google.com/',
@@ -63,7 +63,7 @@ export async function GET(_req: NextRequest) {
           },
         ],
         warning:
-          'Google Business Profile APIã®QuotaãŒ0ã®ãŸã‚ã€ãƒ‡ãƒ¢ãƒ‡ãƒ¼ã‚¿ã‚’è¡¨ç¤ºã—ã¦ã„ã¾ã™ã€‚',
+          'Google Business Profile API‚ÌQuota‚ª0‚Ì‚½‚ßAƒfƒ‚ƒf[ƒ^‚ğ•\¦‚µ‚Ä‚¢‚Ü‚·B',
       })
     }
 

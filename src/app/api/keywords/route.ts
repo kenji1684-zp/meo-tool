@@ -1,6 +1,6 @@
-ï»¿import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth'
 
 const PLACES_API_URL = 'https://places.googleapis.com/v1/places:searchText'
 
@@ -13,12 +13,12 @@ interface PlaceResult {
 }
 
 const DEFAULT_KEYWORDS = [
-  'å¾³å³¶ è‚‰é€šè²©',
-  'åŒ—å³¶ç”º ç²¾è‚‰åº—',
-  'å¾³å³¶å¸‚ åˆ‡ã‚Šè½ã¨ã—',
-  'å¾³å³¶å¸‚ å›½ç”£ã‚¿ãƒ³',
-  'å¾³å³¶å¸‚ å›½ç”£ãƒãƒ©ãƒŸ',
-  'å¾³å³¶å¸‚ è‚‰ã‚»ãƒ¼ãƒ«',
+  '“¿“‡ “÷’Ê”Ì',
+  '–k“‡’¬ ¸“÷“X',
+  '“¿“‡s Ø‚è—‚Æ‚µ',
+  '“¿“‡s ‘Yƒ^ƒ“',
+  '“¿“‡s ‘Yƒnƒ‰ƒ~',
+  '“¿“‡s “÷ƒZ[ƒ‹',
 ]
 
 async function searchPlaces(
@@ -64,9 +64,9 @@ function isTargetStore(place: PlaceResult) {
   const address = place.formattedAddress ?? ''
 
   return (
-    name.includes('åŒ—å³¶è—¤åŸç²¾è‚‰åº—') ||
-    name.includes('è—¤åŸç²¾è‚‰åº—') ||
-    address.includes('åŒ—å³¶ç”º')
+    name.includes('–k“‡“¡Œ´¸“÷“X') ||
+    name.includes('“¡Œ´¸“÷“X') ||
+    address.includes('–k“‡’¬')
   )
 }
 
@@ -112,7 +112,7 @@ export async function GET(req: NextRequest) {
     )
 
     return NextResponse.json({
-      locationName: 'æ ªå¼ä¼šç¤¾åŒ—å³¶è—¤åŸç²¾è‚‰åº—',
+      locationName: 'Š”®‰ïĞ–k“‡“¡Œ´¸“÷“X',
       rankings,
       checkedAt: new Date().toISOString(),
     })

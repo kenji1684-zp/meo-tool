@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { authOptions } from '@/app/api/auth/[...nextauth]/route'
+import { authOptions } from '@/lib/auth'
 import { listReviews } from '@/lib/gbp-client'
 import { DEMO_REVIEWS, DEMO_AVG_RATING, DEMO_TOTAL_REVIEWS } from '@/lib/demo-data'
 
