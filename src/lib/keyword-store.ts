@@ -12,10 +12,19 @@ const DATA_DIR = path.join(process.cwd(), 'data')
 // 型定義
 // =============================================
 
+// 複数社対応の企業設定
+export interface CompanySettings {
+  id:            string   // フォルダ名に使う識別子 (例: "asteru")
+  businessTitle: string   // 表示名 (例: "アステル（株）")
+  locationName?: string   // GBP ロケーション ID (手動チェック用、任意)
+  keywords:      string[]
+}
+
+// 旧形式との後方互換
 export interface KeywordSettings {
   locationName:   string
   keywords:       string[]
-  businessTitle?: string  // Places API 検索用ビジネス表示名
+  businessTitle?: string
   lastUpdated?:   string
 }
 
@@ -25,16 +34,52 @@ export interface DailyRankingEntry {
 }
 
 // =============================================
-// 設定 (キーワード + ロケーション)
+// 複数社設定
+// =============================================
+
+export function getAllCompanySettings(): CompanySettings[] {
+  const file = path.join(DATA_DIR, 'keyword-settings.json')
+  if (!fs.existsSync(file)) return []
+  try {
+    const raw = JSON.parse(fs.readFileSync(file, 'utf-8'))
+    if (raw.companies) return raw.companies as CompanySettings[]
+    if (Array.isArray(raw)) return raw as CompanySettings[]
+    // 旧形式（単一オブジェクト）
+    if (raw.locationName) {
+      return [{
+        id:            raw.locationName.replace(/\//g, '_'),
+        businessTitle: raw.businessTitle ?? raw.locationName,
+        locationName:  raw.locationName,
+        keywords:      raw.keywords ?? [],
+      }]
+    }
+    return []
+  } catch { return [] }
+}
+
+export function updateCompanyKeywords(id: string, keywords: string[]): void {
+  if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true })
+  const companies = getAllCompanySettings()
+  const idx = companies.findIndex(c => c.id === id)
+  if (idx >= 0) {
+    companies[idx].keywords = keywords
+  }
+  const file = path.join(DATA_DIR, 'keyword-settings.json')
+  fs.writeFileSync(file, JSON.stringify({ companies }, null, 2))
+}
+
+// =============================================
+// 旧形式（後方互換）
 // =============================================
 
 export function getKeywordSettings(): KeywordSettings {
-  const file = path.join(DATA_DIR, 'keyword-settings.json')
-  if (!fs.existsSync(file)) return { locationName: '', keywords: [] }
-  try {
-    return JSON.parse(fs.readFileSync(file, 'utf-8')) as KeywordSettings
-  } catch {
-    return { locationName: '', keywords: [] }
+  const companies = getAllCompanySettings()
+  if (companies.length === 0) return { locationName: '', keywords: [] }
+  const first = companies[0]
+  return {
+    locationName:  first.locationName ?? first.id,
+    keywords:      first.keywords,
+    businessTitle: first.businessTitle,
   }
 }
 
@@ -62,12 +107,13 @@ export function saveRankings(locationName: string, date: string, rankings: Daily
   fs.writeFileSync(file, JSON.stringify(rankings, null, 2))
 }
 
-export function loadMonthRankings(
-  locationName: string,
+// 会社 ID (フォルダ名) で月データを読み込む（GitHub Actions 保存形式）
+export function loadMonthRankingsById(
+  id: string,
   year: number,
   month: number,
 ): Record<number, DailyRankingEntry[]> {
-  const dir = path.join(DATA_DIR, 'rankings', locationToId(locationName))
+  const dir = path.join(DATA_DIR, 'rankings', id)
   if (!fs.existsSync(dir)) return {}
 
   const result: Record<number, DailyRankingEntry[]> = {}
@@ -80,4 +126,13 @@ export function loadMonthRankings(
     }
   }
   return result
+}
+
+// 旧形式（locationName ベース、後方互換）
+export function loadMonthRankings(
+  locationName: string,
+  year: number,
+  month: number,
+): Record<number, DailyRankingEntry[]> {
+  return loadMonthRankingsById(locationToId(locationName), year, month)
 }
