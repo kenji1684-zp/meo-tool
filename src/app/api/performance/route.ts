@@ -81,7 +81,7 @@ function buildPerformanceData(rawMetrics: any[]): PerformanceData[] {
       color:   METRIC_COLORS[metricType] ?? '#888',
       total,
       data:    dataPoints,
-    } as PerformanceData
+    } as unknown as PerformanceData
   })
 }
 
