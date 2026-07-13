@@ -1,6 +1,5 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
-import { getAdminAccessToken } from '@/lib/admin-token'
 import { authOptions } from '@/lib/auth'
 
 const PLACES_API_URL = 'https://places.googleapis.com/v1/places:searchText'
@@ -95,8 +94,7 @@ export async function GET(req: NextRequest) {
     ? keywordsParam.split(',').map((k) => k.trim()).filter(Boolean)
     : DEFAULT_KEYWORDS
 
-  const adminToken = adminToken
-  try {
+    try {
     const rankings = await Promise.all(
       keywords.map(async (keyword) => {
         const places = await searchPlaces(apiKey, keyword, 20)
