@@ -14,7 +14,6 @@ export const authOptions: AuthOptions = {
             'profile',
             'https://www.googleapis.com/auth/business.manage',
           ].join(' '),
-          prompt: 'consent',
           access_type: 'offline',
         },
       },
@@ -34,7 +33,6 @@ export const authOptions: AuthOptions = {
         token.accessToken = account.access_token
         token.refreshToken = account.refresh_token
         token.expiresAt = account.expires_at
-        if (account.refresh_token) { console.log('[AUTH_TOKEN]', account.refresh_token) }
       }
       return token
     },
@@ -47,4 +45,5 @@ export const authOptions: AuthOptions = {
   session: { strategy: 'jwt' },
   secret: process.env.NEXTAUTH_SECRET,
 }
+
 
