@@ -49,8 +49,9 @@ export async function GET(req: NextRequest) {
     })
   }
 
+  const adminToken = adminToken
   try {
-    const data = await listReviews(await getAdminAccessToken(), locationName, pageSize)
+    const data = await listReviews(adminToken, locationName, pageSize)
     return NextResponse.json(data)
   } catch (err) {
     console.error('reviews API error:', err)

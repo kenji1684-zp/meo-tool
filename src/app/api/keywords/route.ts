@@ -95,6 +95,7 @@ export async function GET(req: NextRequest) {
     ? keywordsParam.split(',').map((k) => k.trim()).filter(Boolean)
     : DEFAULT_KEYWORDS
 
+  const adminToken = adminToken
   try {
     const rankings = await Promise.all(
       keywords.map(async (keyword) => {

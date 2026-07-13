@@ -11,8 +11,9 @@ export async function GET(_req: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const adminToken = adminToken
   try {
-    const accounts = await listAccounts(await getAdminAccessToken())
+    const accounts = await listAccounts(adminToken)
 
     if (!accounts?.length) {
       return NextResponse.json({
@@ -23,7 +24,7 @@ export async function GET(_req: NextRequest) {
 
     const allLocations = await Promise.all(
       accounts.map((account) =>
-        listLocations(await getAdminAccessToken(), account.name)
+        listLocations(adminToken, account.name)
       )
     )
 

@@ -28,8 +28,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'location parameter is required' }, { status: 400 })
   }
 
+  const adminToken = adminToken
   try {
-    const data = await listReviews(await getAdminAccessToken(), locationName)
+    const data = await listReviews(adminToken, locationName)
     return NextResponse.json(data)
   } catch (err) {
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Unknown error' }, { status: 500 })

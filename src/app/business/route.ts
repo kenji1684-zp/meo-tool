@@ -21,13 +21,14 @@ export async function GET(_req: NextRequest) {
     })
   }
 
+  const adminToken = adminToken
   try {
-    const accounts = await listAccounts(await getAdminAccessToken())
+    const accounts = await listAccounts(adminToken)
     if (!accounts?.length) {
       return NextResponse.json({ locations: [] })
     }
     const allLocations = await Promise.all(
-      accounts.map(account => listLocations(await getAdminAccessToken(), account.name))
+      accounts.map(account => listLocations(adminToken, account.name))
     )
     return NextResponse.json({ accounts, locations: allLocations.flat() })
   } catch (err) {
