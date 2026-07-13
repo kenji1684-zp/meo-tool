@@ -1,5 +1,6 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { getAdminAccessToken } from '@/lib/admin-token'
 import { authOptions } from '@/lib/auth'
 import { listReviews } from '@/lib/gbp-client'
 
@@ -8,7 +9,7 @@ const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
 
-  if (!session?.accessToken) {
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const data = await listReviews(session.accessToken, locationName, pageSize)
+    const data = await listReviews(await getAdminAccessToken(), locationName, pageSize)
     return NextResponse.json(data)
   } catch (err) {
     console.error('reviews API error:', err)

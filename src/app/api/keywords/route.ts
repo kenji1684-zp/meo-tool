@@ -1,5 +1,6 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { getAdminAccessToken } from '@/lib/admin-token'
 import { authOptions } from '@/lib/auth'
 
 const PLACES_API_URL = 'https://places.googleapis.com/v1/places:searchText'
@@ -73,7 +74,7 @@ function isTargetStore(place: PlaceResult) {
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
 
-  if (!session?.accessToken) {
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 

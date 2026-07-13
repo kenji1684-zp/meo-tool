@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
+import { getAdminAccessToken } from '@/lib/admin-token'
 import {
   fetchDailyMetrics,
   fetchSearchKeywords,
@@ -106,9 +107,11 @@ function buildSummary(performanceData: PerformanceData[]) {
 export async function GET(req: NextRequest) {
   const session = await getServerSession(authOptions)
 
-  if (!session?.accessToken) {
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const accessToken = await getAdminAccessToken()
 
   const { searchParams } = new URL(req.url)
   const locationName = searchParams.get('location')
@@ -131,7 +134,7 @@ export async function GET(req: NextRequest) {
   // ---- 検索キーワードモード ----
   if (mode === 'keywords') {
     try {
-      const keywords = await fetchSearchKeywords(session.accessToken, locationName)
+      const keywords = await fetchSearchKeywords(accessToken, locationName)
       return NextResponse.json({ keywords })
     } catch (err) {
       console.error('searchKeywords error:', err)
@@ -160,7 +163,7 @@ export async function GET(req: NextRequest) {
   try {
     const { startDate, endDate } = getMonthRange(year, month)
 
-    const rawMetrics = await fetchDailyMetrics(session.accessToken, {
+    const rawMetrics = await fetchDailyMetrics(accessToken, {
       locationName,
       startDate,
       endDate,

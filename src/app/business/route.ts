@@ -1,5 +1,6 @@
 ﻿import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
+import { getAdminAccessToken } from '@/lib/admin-token'
 import { authOptions } from '@/lib/auth'
 import { listAccounts, listLocations } from '@/lib/gbp-client'
 import { DEMO_LOCATION } from '@/lib/demo-data'
@@ -8,7 +9,7 @@ const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true'
 
 export async function GET(_req: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session?.accessToken) {
+  if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
@@ -21,12 +22,12 @@ export async function GET(_req: NextRequest) {
   }
 
   try {
-    const accounts = await listAccounts(session.accessToken!)
+    const accounts = await listAccounts(await getAdminAccessToken())
     if (!accounts?.length) {
       return NextResponse.json({ locations: [] })
     }
     const allLocations = await Promise.all(
-      accounts.map(account => listLocations(session.accessToken!, account.name))
+      accounts.map(account => listLocations(await getAdminAccessToken(), account.name))
     )
     return NextResponse.json({ accounts, locations: allLocations.flat() })
   } catch (err) {
