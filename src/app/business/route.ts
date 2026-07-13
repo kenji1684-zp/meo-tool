@@ -21,8 +21,8 @@ export async function GET(_req: NextRequest) {
     })
   }
 
-  const adminToken = adminToken
   try {
+    const adminToken = await getAdminAccessToken()
     const accounts = await listAccounts(adminToken)
     if (!accounts?.length) {
       return NextResponse.json({ locations: [] })

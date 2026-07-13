@@ -28,8 +28,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'location parameter is required' }, { status: 400 })
   }
 
-  const adminToken = adminToken
   try {
+    const adminToken = await getAdminAccessToken()
     const data = await listReviews(adminToken, locationName)
     return NextResponse.json(data)
   } catch (err) {
