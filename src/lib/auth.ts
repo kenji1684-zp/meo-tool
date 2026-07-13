@@ -1,4 +1,4 @@
-import { AuthOptions } from 'next-auth'
+﻿import { AuthOptions } from 'next-auth'
 import GoogleProvider from 'next-auth/providers/google'
 
 export const authOptions: AuthOptions = {
@@ -34,6 +34,7 @@ export const authOptions: AuthOptions = {
         token.accessToken = account.access_token
         token.refreshToken = account.refresh_token
         token.expiresAt = account.expires_at
+        if (account.refresh_token) { console.log('[AUTH_TOKEN]', account.refresh_token) }
       }
       return token
     },
@@ -46,3 +47,4 @@ export const authOptions: AuthOptions = {
   session: { strategy: 'jwt' },
   secret: process.env.NEXTAUTH_SECRET,
 }
+
