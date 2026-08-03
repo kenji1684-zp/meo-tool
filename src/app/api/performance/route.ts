@@ -141,8 +141,9 @@ export async function GET(req: NextRequest) {
         kwYear  = parseInt(p[0])
         kwMonth = parseInt(p[1])
       }
-      const keywords = await fetchSearchKeywords(accessToken, locationName, kwYear, kwMonth)
-      return NextResponse.json({ keywords })
+      const kw = await fetchSearchKeywords(accessToken, locationName, kwYear, kwMonth)
+      // keywordsMonth: 実際にデータが取れた年月（0件時は前月へ遡るため要求月と異なる場合がある）
+      return NextResponse.json({ keywords: kw.keywords, keywordsMonth: kw.yearmonth })
     } catch (err) {
       console.error('searchKeywords error:', err)
       // デモデータは返さない（偽データが本物として表示される事故を防ぐ）
