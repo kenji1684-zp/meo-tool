@@ -5,7 +5,7 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { signOut, useSession } from 'next-auth/react'
 import {
   LayoutDashboard, TrendingUp, Search, MessageSquare,
-  MapPin, LogOut, ChevronDown, Building2
+  MapPin, LogOut, ChevronDown, Building2, ImageIcon
 } from 'lucide-react'
 import clsx from 'clsx'
 import Image from 'next/image'
@@ -21,6 +21,7 @@ const navItems: NavItem[] = [
   { href: '/dashboard/performance', label: 'パフォーマンス', icon: <TrendingUp size={18} /> },
   { href: '/dashboard/keywords',    label: 'キーワード順位', icon: <Search size={18} /> },
   { href: '/dashboard/reviews',     label: 'クチコミ管理',   icon: <MessageSquare size={18} /> },
+  { href: '/dashboard/media',       label: '写真管理',     icon: <ImageIcon size={18} /> },
 ]
 
 interface SidebarProps {
