@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { getAdminAccessToken } from '@/lib/admin-token'
 import { authOptions } from '@/lib/auth'
+import { put } from '@vercel/blob'
 import {
   listMedia,
-  uploadLocationPhoto,
+  createMediaFromUrl,
   deleteMedia,
   resolveLocationParent,
   MediaCategory,
@@ -64,10 +65,33 @@ export async function POST(req: NextRequest) {
   const locationName = String(form.get('location') ?? '')
   const categoryRaw = String(form.get('category') ?? 'ADDITIONAL')
   const description = String(form.get('description') ?? '').trim()
+  const sourceUrlInput = String(form.get('sourceUrl') ?? '').trim()
 
   if (!locationName) {
     return NextResponse.json({ error: 'location が指定されていません' }, { status: 400 })
   }
+
+  const category = (VALID_CATEGORIES as string[]).includes(categoryRaw)
+    ? (categoryRaw as MediaCategory)
+    : 'ADDITIONAL'
+
+  // ---- 公開URLを直接指定するモード ----
+  if (!file && sourceUrlInput) {
+    if (!/^https:\/\//.test(sourceUrlInput)) {
+      return NextResponse.json({ error: '画像URLは https:// で始まる必要があります' }, { status: 400 })
+    }
+    try {
+      const accessToken = await getAdminAccessToken()
+      const parent = await resolveLocationParent(accessToken, locationName)
+      const mediaItem = await createMediaFromUrl(
+        accessToken, parent, sourceUrlInput, category, description || undefined
+      )
+      return NextResponse.json({ mediaItem })
+    } catch (err) {
+      return errorResponse(err, '写真のアップロードに失敗しました')
+    }
+  }
+
   if (!(file instanceof File)) {
     return NextResponse.json({ error: 'file が指定されていません' }, { status: 400 })
   }
@@ -84,18 +108,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: '画像サイズが小さすぎます（10KB以上）' }, { status: 400 })
   }
 
-  const category = (VALID_CATEGORIES as string[]).includes(categoryRaw)
-    ? (categoryRaw as MediaCategory)
-    : 'ADDITIONAL'
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    return NextResponse.json(
+      { error: 'Vercel Blobが未設定です。Vercelの Storage で Blob ストアを作成し、meo-tool プロジェクトに接続してください。' },
+      { status: 500 }
+    )
+  }
 
   try {
     const accessToken = await getAdminAccessToken()
     const parent = await resolveLocationParent(accessToken, locationName)
-    const bytes = await file.arrayBuffer()
-    const mediaItem = await uploadLocationPhoto(
-      accessToken, parent, bytes, file.type, category, description || undefined
+
+    // Googleは公開URLからしか画像を取り込めない（バイト送信はGoogle側のバグ）ため、
+    // 一旦 Vercel Blob に公開保存してそのURLを渡す
+    const ext = file.type === 'image/png' ? 'png' : 'jpg'
+    const blob = await put(`gbp-media/${Date.now()}.${ext}`, file, {
+      access: 'public',
+      contentType: file.type,
+      addRandomSuffix: true,
+    })
+
+    const mediaItem = await createMediaFromUrl(
+      accessToken, parent, blob.url, category, description || undefined
     )
-    return NextResponse.json({ mediaItem })
+
+    // Blob は削除しない：Googleが後から画像を取得し直す場合に備えるため。
+    // 溜まってきたら Vercel の Storage 画面から古いものを消してください。
+    return NextResponse.json({ mediaItem, blobUrl: blob.url })
   } catch (err) {
     return errorResponse(err, '写真のアップロードに失敗しました')
   }
