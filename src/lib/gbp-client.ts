@@ -146,30 +146,69 @@ export interface SearchKeywordCount {
   count: number
 }
 
-/** 検索されたキーワード一覧を取得 */
+/**
+ * 検索されたキーワード一覧を取得
+ * GET https://businessprofileperformance.googleapis.com/v1/locations/{id}/searchkeywords/impressions/monthly
+ * ※ locationName は "locations/{id}" 形式に正規化してから使用
+ * ※ year/month 未指定時は「先月」を対象（当月分はAPIが返さないため）
+ */
 export async function fetchSearchKeywords(
   accessToken: string,
-  locationName: string
+  locationName: string,
+  year?: number,
+  month?: number
 ): Promise<SearchKeywordCount[]> {
-  const res = await fetch(
-    `${GBP_PERF_URL}/${locationName}:searchKeywords`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  )
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`searchKeywords API error: ${res.status} - ${err}`)
+  // "accounts/x/locations/y" → "locations/y" に正規化
+  const li = locationName.indexOf('locations/')
+  const locId = li >= 0 ? locationName.slice(li) : locationName
+
+  if (!year || !month) {
+    const d = new Date()
+    d.setMonth(d.getMonth() - 1)
+    year = d.getFullYear()
+    month = d.getMonth() + 1
   }
-  const data = await res.json()
-  return (data.searchKeywordsCounts ?? [])
-    .map((item: { searchKeyword: string; insightsValue?: { threshold?: boolean; value?: string } }) => ({
-      searchKeyword: item.searchKeyword,
-      count: parseInt(item.insightsValue?.value ?? '0'),
-    }))
-    .sort((a: SearchKeywordCount, b: SearchKeywordCount) => b.count - a.count)
+
+  const qs = new URLSearchParams({
+    'monthlyRange.start_month.year':  String(year),
+    'monthlyRange.start_month.month': String(month),
+    'monthlyRange.end_month.year':    String(year),
+    'monthlyRange.end_month.month':   String(month),
+    pageSize: '100',
+  })
+
+  const results: SearchKeywordCount[] = []
+  let pageToken: string | undefined
+
+  do {
+    const url =
+      `${GBP_PERF_URL}/${locId}/searchkeywords/impressions/monthly?${qs.toString()}` +
+      (pageToken ? `&pageToken=${encodeURIComponent(pageToken)}` : '')
+
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
+    if (!res.ok) {
+      const err = await res.text()
+      throw new Error(`searchKeywords API error: ${res.status} - ${err}`)
+    }
+    const data = await res.json()
+
+    for (const item of (data.searchKeywordsCounts ?? []) as {
+      searchKeyword: string
+      insightsValue?: { threshold?: string; value?: string }
+    }[]) {
+      results.push({
+        searchKeyword: item.searchKeyword,
+        // value が無い場合は threshold（「15未満」等の下限値）を採用
+        count: parseInt(item.insightsValue?.value ?? item.insightsValue?.threshold ?? '0'),
+      })
+    }
+
+    pageToken = data.nextPageToken
+  } while (pageToken)
+
+  return results.sort((a, b) => b.count - a.count)
 }
 
 // =============================================
