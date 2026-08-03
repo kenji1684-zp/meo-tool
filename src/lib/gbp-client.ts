@@ -413,6 +413,37 @@ export async function uploadLocationPhoto(
   return res.json() as Promise<MediaItem>
 }
 
+/**
+ * 公開URLを指定して写真を追加
+ * ※ バイト列（dataRef）方式はGoogle側のバグで media.create が 500 INTERNAL を返すため、
+ *    公開URLを渡す sourceUrl 方式を使う（Google Issue Tracker 293595949）
+ */
+export async function createMediaFromUrl(
+  accessToken: string,
+  parent: string,
+  sourceUrl: string,
+  category: MediaCategory = 'ADDITIONAL',
+  description?: string
+): Promise<MediaItem> {
+  const res = await fetch(`${REVIEWS_URL}/${parent}/media`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      mediaFormat: 'PHOTO',
+      locationAssociation: { category },
+      sourceUrl,
+      ...(description ? { description } : {}),
+    }),
+  })
+  if (!res.ok) {
+    throw new Error(`media create API error: ${res.status} - ${await res.text()}`)
+  }
+  return res.json() as Promise<MediaItem>
+}
+
 /** 写真を削除（mediaName は accounts/.../locations/.../media/... 形式） */
 export async function deleteMedia(accessToken: string, mediaName: string): Promise<void> {
   const res = await fetch(`${REVIEWS_URL}/${mediaName}`, {
