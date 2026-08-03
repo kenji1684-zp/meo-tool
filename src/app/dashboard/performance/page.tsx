@@ -141,6 +141,8 @@ export default function PerformancePage() {
   const [locations, setLocations]       = useState<{ name: string; title: string }[]>([])
   const [searchedKeywords, setSearchedKeywords] = useState<{ searchKeyword: string; count: number }[]>([])
   const [kwFetched, setKwFetched] = useState(false)
+  // 検索キーワードが実際に取得できた年月（例: "2026/06"）
+  const [kwMonth, setKwMonth] = useState('')
   // keyword-settings の7社リスト
   const [kwCompanies, setKwCompanies] = useState<{
     businessTitle: string; locationName?: string
@@ -232,6 +234,7 @@ export default function PerformancePage() {
     setMetrics([])
     setPrevMetrics([])
     setSearchedKeywords([])
+    setKwMonth('')
     setKwFetched(false)
   }
 
@@ -299,6 +302,7 @@ export default function PerformancePage() {
       const res  = await fetch(`/api/performance?location=${encodeURIComponent(locationName)}&mode=keywords`)
       const data = await res.json()
       setSearchedKeywords(data.keywords ?? [])
+      setKwMonth(data.keywordsMonth ?? '')
       setKwFetched(true)
     } catch { /* ignore */ } finally {
       setLoadingKw(false)
@@ -727,7 +731,14 @@ export default function PerformancePage() {
           {/* 検索されたキーワード */}
           <div className="card">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="font-bold text-surface-900">検索されたキーワード</h2>
+              <div className="flex items-baseline gap-2">
+                <h2 className="font-bold text-surface-900">検索されたキーワード</h2>
+                {kwMonth && (
+                  <span className="text-xs text-gray-500">
+                    {kwMonth.split('/')[0]}年{Number(kwMonth.split('/')[1])}月のデータ
+                  </span>
+                )}
+              </div>
               <div className="flex gap-2">
                 <button
                   onClick={fetchKeywords}
