@@ -146,29 +146,22 @@ export interface SearchKeywordCount {
   count: number
 }
 
-/**
- * 検索されたキーワード一覧を取得
- * GET https://businessprofileperformance.googleapis.com/v1/locations/{id}/searchkeywords/impressions/monthly
- * ※ locationName は "locations/{id}" 形式に正規化してから使用
- * ※ year/month 未指定時は「先月」を対象（当月分はAPIが返さないため）
- */
-export async function fetchSearchKeywords(
+export interface SearchKeywordsResult {
+  keywords: SearchKeywordCount[]
+  /** 実際にデータを取得できた年月（例: "2026/06"） */
+  yearmonth: string
+}
+
+/** 0件だった場合に遡る回数（先月を含む試行回数） */
+const KEYWORD_MONTH_ATTEMPTS = 3
+
+/** 指定1ヵ月分の検索キーワードを取得 */
+async function fetchKeywordsForMonth(
   accessToken: string,
-  locationName: string,
-  year?: number,
-  month?: number
+  locId: string,
+  year: number,
+  month: number
 ): Promise<SearchKeywordCount[]> {
-  // "accounts/x/locations/y" → "locations/y" に正規化
-  const li = locationName.indexOf('locations/')
-  const locId = li >= 0 ? locationName.slice(li) : locationName
-
-  if (!year || !month) {
-    const d = new Date()
-    d.setMonth(d.getMonth() - 1)
-    year = d.getFullYear()
-    month = d.getMonth() + 1
-  }
-
   const qs = new URLSearchParams({
     'monthlyRange.start_month.year':  String(year),
     'monthlyRange.start_month.month': String(month),
@@ -209,6 +202,51 @@ export async function fetchSearchKeywords(
   } while (pageToken)
 
   return results.sort((a, b) => b.count - a.count)
+}
+
+/**
+ * 検索されたキーワード一覧を取得
+ * GET https://businessprofileperformance.googleapis.com/v1/locations/{id}/searchkeywords/impressions/monthly
+ * ※ locationName は "locations/{id}" 形式に正規化してから使用
+ * ※ Googleは月次データの公開が2〜3週間遅れるため、0件なら前月へ自動で遡る
+ */
+export async function fetchSearchKeywords(
+  accessToken: string,
+  locationName: string,
+  year?: number,
+  month?: number
+): Promise<SearchKeywordsResult> {
+  // "accounts/x/locations/y" → "locations/y" に正規化
+  const li = locationName.indexOf('locations/')
+  const locId = li >= 0 ? locationName.slice(li) : locationName
+
+  let y: number
+  let m: number
+  if (year && month) {
+    y = year
+    m = month
+  } else {
+    // 未指定なら先月（当月分はGoogleが未公開）
+    const d = new Date()
+    d.setMonth(d.getMonth() - 1)
+    y = d.getFullYear()
+    m = d.getMonth() + 1
+  }
+
+  for (let i = 0; i < KEYWORD_MONTH_ATTEMPTS; i++) {
+    const keywords = await fetchKeywordsForMonth(accessToken, locId, y, m)
+    if (keywords.length > 0 || i === KEYWORD_MONTH_ATTEMPTS - 1) {
+      return { keywords, yearmonth: `${y}/${String(m).padStart(2, '0')}` }
+    }
+    // 0件だったので前月へ
+    m -= 1
+    if (m === 0) {
+      m = 12
+      y -= 1
+    }
+  }
+
+  return { keywords: [], yearmonth: `${y}/${String(m).padStart(2, '0')}` }
 }
 
 // =============================================
