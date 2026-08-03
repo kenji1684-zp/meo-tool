@@ -52,13 +52,15 @@ const DAILY_METRICS = [
 // =============================================
 
 function ComparisonTable({
-  metrics, current, previous, curLabel, prevLabel,
+  metrics, current, previous, curLabel, prevLabel, pending = false,
 }: {
   metrics:  { key: string; label: string; color: string }[]
   current:  Record<string, number>
   previous: Record<string, number>
   curLabel:  string
   prevLabel: string
+  /** Google側の集計待ちで当月データが未反映の場合 true */
+  pending?: boolean
 }) {
   const totalCur  = metrics.reduce((s, m) => s + (current[m.key]  ?? 0), 0)
   const totalPrev = metrics.reduce((s, m) => s + (previous[m.key] ?? 0), 0)
@@ -84,7 +86,10 @@ function ComparisonTable({
           <tr className="bg-gray-800 text-white text-center">
             <th className="text-left px-4 py-2 font-medium rounded-tl"></th>
             <th className="px-4 py-2 font-medium">{prevLabel}</th>
-            <th className="px-4 py-2 font-medium">{curLabel}</th>
+            <th className="px-4 py-2 font-medium">
+              {curLabel}
+              {pending && <span className="ml-1.5 text-xs font-normal opacity-80">（集計中）</span>}
+            </th>
             <th className="px-4 py-2 font-medium rounded-tr">増減</th>
           </tr>
         </thead>
@@ -98,9 +103,11 @@ function ComparisonTable({
               <tr key={m.key} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="px-4 py-2 text-gray-700">{m.label}</td>
                 <td className="px-4 py-2 text-center tabular-nums">{prev.toLocaleString()}</td>
-                <td className="px-4 py-2 text-center tabular-nums">{cur.toLocaleString()}</td>
-                <td className={`px-4 py-2 text-center tabular-nums font-medium ${diffClass(diff)}`}>
-                  {fmt(diff, diff, pct)}
+                <td className="px-4 py-2 text-center tabular-nums">
+                  {pending ? <span className="text-gray-400">集計中</span> : cur.toLocaleString()}
+                </td>
+                <td className={`px-4 py-2 text-center tabular-nums font-medium ${pending ? '' : diffClass(diff)}`}>
+                  {pending ? '' : fmt(diff, diff, pct)}
                 </td>
               </tr>
             )
@@ -108,9 +115,11 @@ function ComparisonTable({
           <tr className="bg-gray-50 font-bold border-t-2 border-gray-300">
             <td className="px-4 py-2">合計</td>
             <td className="px-4 py-2 text-center tabular-nums">{totalPrev.toLocaleString()}</td>
-            <td className="px-4 py-2 text-center tabular-nums">{totalCur.toLocaleString()}</td>
-            <td className={`px-4 py-2 text-center tabular-nums ${diffClass(totalDiff)}`}>
-              {fmt(totalDiff, totalDiff, totalPct)}
+            <td className="px-4 py-2 text-center tabular-nums">
+              {pending ? <span className="text-gray-400">集計中</span> : totalCur.toLocaleString()}
+            </td>
+            <td className={`px-4 py-2 text-center tabular-nums ${pending ? '' : diffClass(totalDiff)}`}>
+              {pending ? '' : fmt(totalDiff, totalDiff, totalPct)}
             </td>
           </tr>
         </tbody>
@@ -447,6 +456,12 @@ export default function PerformancePage() {
   const curLabel  = `${curY}年${curMo}月`
   const prevLabel = `${curY - 1}年${curMo}月`
 
+  // Googleのパフォーマンスデータは4〜5日遅れで反映される。
+  // 取得済みだが全指榙0の月は「未反映」とみなし、数値と増減を出さない（-100%表示を防ぐ）
+  const curPending =
+    metrics.length > 0 &&
+    DAILY_METRICS.every(m => (curTotals[m.key] ?? 0) === 0)
+
   const prevMonths = Array.from({ length: 12 }, (_, i) =>
     format(subMonths(new Date(), i), 'yyyy/M')
   )
@@ -667,6 +682,7 @@ export default function PerformancePage() {
               previous={prevTotals}
               curLabel={curLabel}
               prevLabel={prevLabel}
+              pending={curPending}
             />
           </div>
 
@@ -696,6 +712,7 @@ export default function PerformancePage() {
               previous={prevTotals}
               curLabel={curLabel}
               prevLabel={prevLabel}
+              pending={curPending}
             />
           </div>
 
@@ -725,6 +742,7 @@ export default function PerformancePage() {
               previous={prevTotals}
               curLabel={curLabel}
               prevLabel={prevLabel}
+              pending={curPending}
             />
           </div>
 
