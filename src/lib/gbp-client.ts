@@ -155,7 +155,7 @@ export interface SearchKeywordsResult {
 /** 0件だった場合に遡る回数（先月を含む試行回数） */
 const KEYWORD_MONTH_ATTEMPTS = 3
 
-/** 指定1ヵ月分の検索キーワードを取得 */
+/** 指定1ヶ月分の検索キーワードを取得 */
 async function fetchKeywordsForMonth(
   accessToken: string,
   locId: string,
@@ -283,6 +283,162 @@ export async function replyToReview(
     body: JSON.stringify({ comment }),
   })
   if (!res.ok) throw new Error(`review reply API error: ${res.status}`)
+}
+
+// =============================================
+// 写真（メディア）※旧API v4 のみ対応
+// =============================================
+
+const MEDIA_UPLOAD_URL = 'https://mybusiness.googleapis.com/upload/v1/media'
+
+export type MediaCategory =
+  | 'COVER' | 'PROFILE' | 'LOGO'
+  | 'EXTERIOR' | 'INTERIOR' | 'PRODUCT' | 'AT_WORK'
+  | 'FOOD_AND_DRINK' | 'MENU' | 'COMMON_AREA' | 'ROOMS' | 'TEAMS'
+  | 'ADDITIONAL'
+
+export interface MediaItem {
+  name: string
+  mediaFormat?: string
+  googleUrl?: string
+  thumbnailUrl?: string
+  createTime?: string
+  description?: string
+  locationAssociation?: { category?: MediaCategory }
+  dimensions?: { widthPixels?: number; heightPixels?: number }
+}
+
+// v4 のメディアAPIは "accounts/{aid}/locations/{lid}" 形式が必須。
+// 画面側は "locations/{lid}" しか持っていないため、アカウントを補って解決する。
+export async function resolveLocationParent(
+  accessToken: string,
+  locationName: string
+): Promise<string> {
+  if (locationName.startsWith('accounts/')) return locationName
+
+  const li = locationName.indexOf('locations/')
+  const locId = li >= 0 ? locationName.slice(li) : `locations/${locationName}`
+
+  const accounts = await listAccounts(accessToken)
+  if (!accounts.length) throw new Error('Googleビジネスプロフィールのアカウントが取得できませんでした')
+  return `${accounts[0].name}/${locId}`
+}
+
+/** 写真一覧を取得 */
+export async function listMedia(
+  accessToken: string,
+  parent: string,
+  pageSize = 100
+): Promise<MediaItem[]> {
+  const res = await fetch(`${REVIEWS_URL}/${parent}/media?pageSize=${pageSize}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!res.ok) {
+    throw new Error(`media list API error: ${res.status} - ${await res.text()}`)
+  }
+  const data = await res.json()
+  return (data.mediaItems ?? []) as MediaItem[]
+}
+
+/** アップロード用の dataRef を発行 */
+async function startMediaUpload(accessToken: string, parent: string): Promise<string> {
+  const res = await fetch(`${REVIEWS_URL}/${parent}/media:startUpload`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: '{}',
+  })
+  if (!res.ok) {
+    throw new Error(`media startUpload API error: ${res.status} - ${await res.text()}`)
+  }
+  const data = await res.json()
+  if (!data.resourceName) throw new Error('startUpload が resourceName を返しませんでした')
+  return data.resourceName as string
+}
+
+/** 画像バイト列を送信 */
+async function uploadMediaBytes(
+  accessToken: string,
+  resourceName: string,
+  bytes: ArrayBuffer,
+  contentType: string
+): Promise<void> {
+  const res = await fetch(`${MEDIA_UPLOAD_URL}/${resourceName}?upload_type=media`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': contentType,
+    },
+    body: bytes,
+  })
+  if (!res.ok) {
+    throw new Error(`media upload API error: ${res.status} - ${await res.text()}`)
+  }
+}
+
+/**
+ * 写真を追加
+ * startUpload → バイト送信 → media 作成 の3段階
+ * ※ 作成した時点でGoogleマップ上に公開される（下書き状態は無い）
+ */
+export async function uploadLocationPhoto(
+  accessToken: string,
+  parent: string,
+  bytes: ArrayBuffer,
+  contentType: string,
+  category: MediaCategory = 'ADDITIONAL',
+  description?: string
+): Promise<MediaItem> {
+  const resourceName = await startMediaUpload(accessToken, parent)
+  await uploadMediaBytes(accessToken, resourceName, bytes, contentType)
+
+  const res = await fetch(`${REVIEWS_URL}/${parent}/media`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      mediaFormat: 'PHOTO',
+      locationAssociation: { category },
+      dataRef: { resourceName },
+      ...(description ? { description } : {}),
+    }),
+  })
+  if (!res.ok) {
+    throw new Error(`media create API error: ${res.status} - ${await res.text()}`)
+  }
+  return res.json() as Promise<MediaItem>
+}
+
+/** 写真を削除（mediaName は accounts/.../locations/.../media/... 形式） */
+export async function deleteMedia(accessToken: string, mediaName: string): Promise<void> {
+  const res = await fetch(`${REVIEWS_URL}/${mediaName}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!res.ok) {
+    throw new Error(`media delete API error: ${res.status} - ${await res.text()}`)
+  }
+}
+
+/** 写真カテゴリの日本語ラベル */
+export const MEDIA_CATEGORY_LABELS: Record<MediaCategory, string> = {
+  ADDITIONAL:     'その他の写真',
+  EXTERIOR:       '外観',
+  INTERIOR:       '内観',
+  PRODUCT:        '商品',
+  AT_WORK:        '作業中',
+  FOOD_AND_DRINK: '料理・ドリンク',
+  MENU:           'メニュー',
+  COMMON_AREA:    '共用エリア',
+  ROOMS:          '客室',
+  TEAMS:          'チーム',
+  COVER:          'カバー写真',
+  PROFILE:        'プロフィール写真',
+  LOGO:           'ロゴ',
 }
 
 // =============================================
