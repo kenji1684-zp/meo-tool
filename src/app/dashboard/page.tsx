@@ -27,9 +27,11 @@ interface StatCardProps {
   icon: React.ReactNode
   color: string
   change?: number | null
+  /** Google側の集計待ちで当月データが未反映の場合 true */
+  pending?: boolean
 }
 
-function StatCard({ label, value, icon, color, change }: StatCardProps) {
+function StatCard({ label, value, icon, color, change, pending }: StatCardProps) {
   return (
     <div className="stat-card card-hover animate-slide-up">
       <div className="flex items-start justify-between">
@@ -38,8 +40,12 @@ function StatCard({ label, value, icon, color, change }: StatCardProps) {
           {icon}
         </span>
       </div>
-      <div className="stat-value">{value.toLocaleString()}</div>
-      {change != null && (
+      <div className="stat-value">
+        {pending
+          ? <span className="text-base font-medium text-gray-400">集計中</span>
+          : value.toLocaleString()}
+      </div>
+      {change != null && !pending && (
         <div className={change >= 0 ? 'stat-change-up' : 'stat-change-down'}>
           {change >= 0 ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
           {Math.abs(change)}% 先月比
@@ -100,6 +106,18 @@ const prevMonths = Array.from({ length: 6 }, (_, i) => {
   const d = subMonths(new Date(), i)
   return format(d, 'yyyy/M')
 })
+
+// Googleのパフォーマンスデータは4〜5日遅れで反映される。
+// 全指標が0の月は「未反映」とみなし、数値の代わりに「集計中」を表示する
+const pending = !!summary && [
+  summary.totalSearchViews,
+  summary.totalMapViews,
+  summary.totalWebsiteClicks,
+  summary.totalCallClicks,
+  summary.totalDirectionRequests,
+  summary.totalDirectQueries,
+  summary.totalIndirectQueries,
+].every(v => (v ?? 0) === 0)
 
   return (
     <div className="space-y-8">
@@ -178,42 +196,49 @@ const prevMonths = Array.from({ length: 6 }, (_, i) => {
               value={summary.totalSearchViews}
               icon={<Search size={18} className="text-brand-600" />}
               color="bg-brand-50"
+              pending={pending}
             />
             <StatCard
               label="マップ表示回数"
               value={summary.totalMapViews}
               icon={<MapPin size={18} className="text-amber-600" />}
               color="bg-amber-50"
+              pending={pending}
             />
             <StatCard
               label="Webサイトクリック"
               value={summary.totalWebsiteClicks}
               icon={<Globe size={18} className="text-emerald-600" />}
               color="bg-emerald-50"
+              pending={pending}
             />
             <StatCard
               label="電話クリック"
               value={summary.totalCallClicks}
               icon={<Phone size={18} className="text-rose-600" />}
               color="bg-rose-50"
+              pending={pending}
             />
             <StatCard
               label="道順リクエスト"
               value={summary.totalDirectionRequests}
               icon={<Navigation size={18} className="text-orange-600" />}
               color="bg-orange-50"
+              pending={pending}
             />
             <StatCard
               label="ダイレクト検索"
               value={summary.totalDirectQueries}
               icon={<Eye size={18} className="text-purple-600" />}
               color="bg-purple-50"
+              pending={pending}
             />
             <StatCard
               label="間接検索"
               value={summary.totalIndirectQueries}
               icon={<Search size={18} className="text-cyan-600" />}
               color="bg-cyan-50"
+              pending={pending}
             />
           </div>
 
