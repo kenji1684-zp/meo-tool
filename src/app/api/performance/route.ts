@@ -134,14 +134,21 @@ export async function GET(req: NextRequest) {
   // ---- 検索キーワードモード ----
   if (mode === 'keywords') {
     try {
-      const keywords = await fetchSearchKeywords(accessToken, locationName)
+      let kwYear: number | undefined
+      let kwMonth: number | undefined
+      if (yearmonth) {
+        const p = yearmonth.split(/[/-]/)
+        kwYear  = parseInt(p[0])
+        kwMonth = parseInt(p[1])
+      }
+      const keywords = await fetchSearchKeywords(accessToken, locationName, kwYear, kwMonth)
       return NextResponse.json({ keywords })
     } catch (err) {
       console.error('searchKeywords error:', err)
-      // エラー時はデモデータを返す（表示を途切れさせない）
+      // デモデータは返さない（偽データが本物として表示される事故を防ぐ）
       return NextResponse.json({
-        keywords: DEMO_KEYWORDS,
-        warning: `検索キーワードAPIエラー: ${err instanceof Error ? err.message : String(err)}`,
+        keywords: [],
+        error: '検索キーワードを取得できませんでした',
       })
     }
   }
