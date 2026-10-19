@@ -35,8 +35,11 @@ function ymLabel(ym: string) {
   const [y, m] = ym.split('/').map(Number)
   return `${y}年${m}月`
 }
-function sumOf(metrics: MetricSeries[] | undefined, keys: string[]) {
-  return (metrics ?? []).filter((m) => keys.includes(m.metric)).reduce((s, m) => s + m.total, 0)
+/** maxDay を指定すると 1日〜maxDay日 の合計（今月途中と前月同期を比べるため） */
+function sumOf(metrics: MetricSeries[] | undefined, keys: string[], maxDay?: number) {
+  return (metrics ?? [])
+    .filter((m) => keys.includes(m.metric))
+    .reduce((s, m) => s + (maxDay ? m.data.filter((d) => d.day <= maxDay).reduce((a, d) => a + d.value, 0) : m.total), 0)
 }
 
 const KPI_DEFS = [
@@ -114,6 +117,14 @@ export default function ClientDashboard({ token, companyName }: { token: string;
     })
   }, [perf, daysInMonth])
 
+  // 今月はGoogleの集計が数日遅れるため、データのある最終日までで前月同期と比較する
+  const compareDay = useMemo(() => {
+    if (ym !== thisMonth) return undefined
+    let last = 0
+    for (const m of perf?.metrics ?? []) for (const d of m.data) if (d.value > 0 && d.day > last) last = d.day
+    return last || undefined
+  }, [perf, ym, thisMonth])
+
   const rankDays = useMemo(
     () => Object.keys(rank?.rankings ?? {}).map(Number).sort((a, b) => a - b),
     [rank],
@@ -151,7 +162,7 @@ export default function ClientDashboard({ token, companyName }: { token: string;
         <section className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
           {KPI_DEFS.map(({ label, keys, icon: Icon, color }) => {
             const cur = sumOf(perf?.metrics, keys)
-            const prev = sumOf(prevPerf?.metrics, keys)
+            const prev = sumOf(prevPerf?.metrics, keys, compareDay)
             const diff = prev > 0 ? Math.round(((cur - prev) / prev) * 100) : null
             return (
               <div key={label} className="bg-white rounded-2xl border border-slate-100 p-4 sm:p-5">
@@ -166,9 +177,9 @@ export default function ClientDashboard({ token, companyName }: { token: string;
                   <div className="text-xs mt-1">
                     <p className={`flex items-center gap-1 whitespace-nowrap ${diff == null ? 'text-slate-400' : diff >= 0 ? 'text-emerald-600' : 'text-rose-500'}`}>
                       {diff == null ? <Minus size={12} /> : diff >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
-                      {diff == null ? '前月データなし' : `前月比 ${diff >= 0 ? '+' : ''}${diff}%`}
+                      {diff == null ? '前月データなし' : `${compareDay ? '前月同期比' : '前月比'} ${diff >= 0 ? '+' : ''}${diff}%`}
                     </p>
-                    <p className="text-slate-400 whitespace-nowrap">前月 {prev.toLocaleString()}</p>
+                    <p className="text-slate-400 whitespace-nowrap">{compareDay ? `前月1〜${compareDay}日` : '前月'} {prev.toLocaleString()}</p>
                   </div>
                 )}
               </div>
@@ -287,7 +298,7 @@ export default function ClientDashboard({ token, companyName }: { token: string;
         </section>
 
         <footer className="text-center text-xs text-slate-400 py-6 space-y-1">
-          <p>データ出典：Googleビジネスプロフィール。直近2〜3日分はGoogle側の集計待ちで少なく表示されることがあります。</p>
+          <p>データ出典：Googleビジネスプロフィール。直近3〜5日分はGoogle側の集計待ちのため未反映です。今月の前月比は、データのある日までの前月同期間と比較しています。</p>
           <p>このページは {companyName} 様専用です。URLの共有にご注意ください。</p>
           <p className="pt-2">Provided by 株式会社ZERO PLUS</p>
         </footer>
