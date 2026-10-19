@@ -4,7 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts'
-import { TrendingUp, TrendingDown, Minus, Search, MapPin, Globe, Phone, Navigation } from 'lucide-react'
+import { TrendingUp, TrendingDown, Minus, Search, MapPin, Globe, Phone, Navigation, BarChart3, Camera, Megaphone } from 'lucide-react'
+import { PhotoPanel, PostPanel } from './PublishPanels'
 
 // =============================================
 // 型
@@ -70,6 +71,7 @@ export default function ClientDashboard({ token, companyName }: { token: string;
   const [kw, setKw] = useState<KwResponse | null>(null)
   const [rank, setRank] = useState<RankResponse | null>(null)
   const [loading, setLoading] = useState(true)
+  const [tab, setTab] = useState<'report' | 'photo' | 'post'>('report')
 
   const monthOptions = useMemo(() => Array.from({ length: 13 }, (_, i) => shiftMonth(thisMonth, -i)), [thisMonth])
   const api = (type: string, month: string) =>
@@ -137,10 +139,10 @@ export default function ClientDashboard({ token, companyName }: { token: string;
       <header className="bg-white border-b border-slate-100">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-xs font-medium text-sky-600 tracking-wide">Googleビジネスプロフィール 月次レポート</p>
+            <p className="text-xs font-medium text-sky-600 tracking-wide">Googleビジネスプロフィール 管理ページ</p>
             <h1 className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">{companyName} 様</h1>
           </div>
-          <select
+          {tab === 'report' && <select
             value={ym}
             onChange={(e) => setYm(e.target.value)}
             className="input !w-auto font-medium"
@@ -149,11 +151,26 @@ export default function ClientDashboard({ token, companyName }: { token: string;
             {monthOptions.map((m) => (
               <option key={m} value={m}>{ymLabel(m)}{m === thisMonth ? '（今月・途中経過）' : ''}</option>
             ))}
-          </select>
+          </select>}
         </div>
+        <nav className="max-w-6xl mx-auto px-2 sm:px-6 flex gap-1 overflow-x-auto" aria-label="メニュー">
+          {([
+            ['report', 'レポート', BarChart3],
+            ['photo', '写真を追加', Camera],
+            ['post', '最新情報を投稿', Megaphone],
+          ] as const).map(([key, label, Icon]) => (
+            <button key={key} onClick={() => setTab(key)}
+              className={`flex items-center gap-1.5 px-3 sm:px-4 py-3 text-sm font-medium border-b-2 whitespace-nowrap transition-colors ${tab === key ? 'border-sky-600 text-sky-700' : 'border-transparent text-slate-500 hover:text-slate-800'}`}>
+              <Icon size={16} />{label}
+            </button>
+          ))}
+        </nav>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6">
+      {tab === 'photo' && <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6"><PhotoPanel token={token} /></main>}
+      {tab === 'post' && <main className="max-w-6xl mx-auto px-4 sm:px-6 py-6"><PostPanel token={token} /></main>}
+
+      <main className={`max-w-6xl mx-auto px-4 sm:px-6 py-6 space-y-6 ${tab === 'report' ? '' : 'hidden'}`}>
         {perf?.error && (
           <div className="rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-sm px-4 py-3">{perf.error}</div>
         )}

@@ -455,6 +455,58 @@ export async function deleteMedia(accessToken: string, mediaName: string): Promi
   }
 }
 
+// =============================================
+// 投稿（最新情報）
+// =============================================
+
+export type CallToActionType = 'LEARN_MORE' | 'BOOK' | 'ORDER' | 'SHOP' | 'SIGN_UP' | 'CALL'
+
+export interface LocalPost {
+  name: string
+  summary?: string
+  state?: string
+  createTime?: string
+  searchUrl?: string
+  media?: { googleUrl?: string; sourceUrl?: string }[]
+  callToAction?: { actionType: CallToActionType; url?: string }
+}
+
+/** 投稿一覧（新しい順） */
+export async function listLocalPosts(accessToken: string, parent: string, pageSize = 10): Promise<LocalPost[]> {
+  const res = await fetch(`${REVIEWS_URL}/${parent}/localPosts?pageSize=${pageSize}`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+  })
+  if (!res.ok) throw new Error(`localPosts list API error: ${res.status} - ${await res.text()}`)
+  const data = await res.json()
+  return (data.localPosts ?? []) as LocalPost[]
+}
+
+/**
+ * 最新情報を投稿（topicType: STANDARD）
+ * ※ 作成した時点で公開される。写真は公開URL（sourceUrl）で渡す
+ */
+export async function createLocalPost(
+  accessToken: string,
+  parent: string,
+  params: { summary: string; photoUrl?: string; callToAction?: { actionType: CallToActionType; url?: string } },
+): Promise<LocalPost> {
+  const body: Record<string, unknown> = {
+    languageCode: 'ja',
+    topicType: 'STANDARD',
+    summary: params.summary,
+  }
+  if (params.photoUrl) body.media = [{ mediaFormat: 'PHOTO', sourceUrl: params.photoUrl }]
+  if (params.callToAction) body.callToAction = params.callToAction
+
+  const res = await fetch(`${REVIEWS_URL}/${parent}/localPosts`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) throw new Error(`localPosts create API error: ${res.status} - ${await res.text()}`)
+  return res.json() as Promise<LocalPost>
+}
+
 /** 写真カテゴリの日本語ラベル */
 export const MEDIA_CATEGORY_LABELS: Record<MediaCategory, string> = {
   ADDITIONAL:     'その他の写真',
